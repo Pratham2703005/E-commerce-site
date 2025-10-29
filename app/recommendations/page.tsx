@@ -1,7 +1,10 @@
+
+
 import { connectDB } from '@/lib/mongodb';
 import { Product } from '@/lib/models/Product';
 import Link from 'next/link';
 import { WishlistButtonClient } from '@/components/WishlistButton';
+import { ClientLayout } from '@/components/ClientLayout';
 
 interface Product {
   _id: string;
@@ -66,25 +69,7 @@ export default async function RecommendationsPage() {
   const recommendedProducts = await getRecommendedProducts();
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Recommended Products</h1>
-              <p className="text-gray-600 mt-2">
-                Curated selection of our best products across categories
-              </p>
-            </div>
-            <Link href="/" className="text-blue-600 hover:text-blue-700 font-semibold">
-              ← Back to Store
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
+    <ClientLayout >
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {recommendedProducts.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
@@ -112,7 +97,7 @@ export default async function RecommendationsPage() {
               ))}
             </div>
 
-            {/* Hybrid Section - Uses Client Component for Interactivity */}
+            {/* Hybrid Section - Why Choose These Products */}
             <div className="bg-white rounded-lg shadow-md p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Why Choose These Products?</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -142,23 +127,27 @@ export default async function RecommendationsPage() {
           </>
         )}
       </main>
-    </div>
+    </ClientLayout>
   );
 }
 
 // Server Component that renders individual product cards
-// This component is rendered on the server but contains a client component
 async function RecommendedProductCard({ product }: { product: Product }) {
   const inStock = product.inventory > 0;
   const lowStock = product.inventory > 0 && product.inventory <= 5;
-  const recommendedBadge = product.inventory > 20; // Highly stocked items
+  const recommendedBadge = product.inventory > 20;
 
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col h-full">
-      {/* Product Image Placeholder with Ribbon */}
+    <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col relative">
+      {/* Wishlist Heart Icon - Top Right */}
+      <div className="absolute top-3 right-3 z-20">
+        <WishlistButtonClient productId={product._id} productName={product.name} />
+      </div>
+
+      {/* Product Image Placeholder */}
       <div className="relative h-48 bg-linear-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
         {recommendedBadge && (
-          <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+          <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
             POPULAR
           </div>
         )}
@@ -212,19 +201,13 @@ async function RecommendedProductCard({ product }: { product: Product }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-2">
+        <div>
           <Link
             href={`/products/${product.slug}`}
             className="block w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center font-semibold"
           >
             View Details
           </Link>
-
-          {/* Wishlist Button - Client Component */}
-          <WishlistButtonClient
-            productId={product._id}
-            productName={product.name}
-          />
         </div>
       </div>
     </div>

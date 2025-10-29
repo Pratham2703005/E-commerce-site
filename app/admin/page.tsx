@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Navbar } from '@/components/Navbar';
 
 interface Product {
   _id?: string;
@@ -28,7 +29,6 @@ const CATEGORIES = ['Electronics', 'Accessories', 'Storage', 'Peripherals', 'Cab
 const API_KEY = 'pratham';
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<'create' | 'update'>('create');
   const [formData, setFormData] = useState<Product>({
     name: '',
     slug: '',
@@ -37,7 +37,6 @@ export default function AdminPanel() {
     category: 'Electronics',
     inventory: 0,
   });
-  const [updateId, setUpdateId] = useState('');
   const [errors, setErrors] = useState<FormError>({});
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -88,10 +87,6 @@ export default function AdminPanel() {
 
     if (!formData.category) {
       newErrors.category = 'Please select a category';
-    }
-
-    if (activeTab === 'update' && !updateId.trim()) {
-      newErrors.updateId = 'Product ID is required for updates';
     }
 
     setErrors(newErrors);
@@ -164,52 +159,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Handle update product
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccessMessage('');
-    setErrorMessage('');
-
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const res = await fetch(`/api/products/update/${updateId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data: ApiResponse = await res.json();
-
-      if (data.success) {
-        showSuccess('Product updated successfully! ✅');
-        setFormData({
-          name: '',
-          slug: '',
-          description: '',
-          price: 0,
-          category: 'Electronics',
-          inventory: 0,
-        });
-        setUpdateId('');
-      } else {
-        showError(data.error || 'Failed to update product');
-      }
-    } catch (error) {
-      console.error('Error updating product:', error);
-      showError('An error occurred while updating the product');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Reset form
   const handleReset = () => {
     setFormData({
@@ -220,7 +169,6 @@ export default function AdminPanel() {
       category: 'Electronics',
       inventory: 0,
     });
-    setUpdateId('');
     setErrors({});
     setSuccessMessage('');
     setErrorMessage('');
@@ -228,28 +176,29 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-              <p className="text-gray-600 mt-2">Manage your product inventory</p>
-            </div>
-            <div className="space-x-4">
-              <Link href="/" className="text-blue-600 hover:text-blue-700 font-semibold">
-                ← Store
-              </Link>
-              <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 font-semibold">
-                Dashboard →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Quick Links */}
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link
+            href="/admin"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow text-center"
+          >
+            <div className="text-4xl mb-2">➕</div>
+            <h3 className="font-bold text-gray-900 mb-1">Create Product</h3>
+            <p className="text-sm text-gray-600">Add new products to your inventory</p>
+          </Link>
+          <Link
+            href="/admin/edit"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow text-center"
+          >
+            <div className="text-4xl mb-2">✏️</div>
+            <h3 className="font-bold text-gray-900 mb-1">Edit Products</h3>
+            <p className="text-sm text-gray-600">Update existing products from a list</p>
+          </Link>
+        </div>
         {/* Messages */}
         {successMessage && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
@@ -267,64 +216,16 @@ export default function AdminPanel() {
 
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Tab Navigation */}
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => {
-                setActiveTab('create');
-                handleReset();
-              }}
-              className={`flex-1 py-4 px-6 font-semibold text-center transition-colors ${
-                activeTab === 'create'
-                  ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Create Product
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('update');
-                handleReset();
-              }}
-              className={`flex-1 py-4 px-6 font-semibold text-center transition-colors ${
-                activeTab === 'update'
-                  ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Update Product
-            </button>
+          <div className="border-b border-gray-200 bg-blue-50">
+            <div className="max-w-6xl mx-auto px-8 py-4">
+              <h2 className="text-2xl font-bold text-gray-900">➕ Create New Product</h2>
+              <p className="text-sm text-gray-600 mt-1">Add a new product to your inventory</p>
+            </div>
           </div>
 
           {/* Form Content */}
           <div className="p-8">
-            <form onSubmit={activeTab === 'create' ? handleCreate : handleUpdate}>
-              {/* Update ID Field (only shown in update tab) */}
-              {activeTab === 'update' && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Product ID (MongoDB ObjectId)
-                  </label>
-                  <input
-                    type="text"
-                    value={updateId}
-                    onChange={(e) => setUpdateId(e.target.value)}
-                    placeholder="e.g., 674d8c5f3a1b2c3d4e5f6g7h"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                      errors.updateId
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-blue-500'
-                    }`}
-                  />
-                  {errors.updateId && (
-                    <p className="text-red-600 text-sm mt-1">{errors.updateId}</p>
-                  )}
-                  <p className="text-gray-500 text-xs mt-2">
-                    Tip: You can find product IDs in the dashboard or database
-                  </p>
-                </div>
-              )}
-
+            <form onSubmit={handleCreate}>
               {/* Product Name */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -337,7 +238,7 @@ export default function AdminPanel() {
                   onChange={handleInputChange}
                   placeholder="e.g., Wireless Headphones"
                   maxLength={100}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-gray-800 ${
                     errors.name
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-blue-500'
@@ -360,7 +261,7 @@ export default function AdminPanel() {
                   value={formData.slug}
                   onChange={handleInputChange}
                   placeholder="e.g., wireless-headphones"
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-gray-800 ${
                     errors.slug
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-blue-500'
@@ -383,7 +284,7 @@ export default function AdminPanel() {
                   onChange={handleInputChange}
                   placeholder="Enter a detailed product description..."
                   rows={4}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-gray-800 ${
                     errors.description
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-blue-500'
@@ -408,7 +309,7 @@ export default function AdminPanel() {
                     name="category"
                     value={formData.category}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-gray-800 ${
                       errors.category
                         ? 'border-red-500 focus:ring-red-500'
                         : 'border-gray-300 focus:ring-blue-500'
@@ -438,7 +339,7 @@ export default function AdminPanel() {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-gray-800 ${
                       errors.price
                         ? 'border-red-500 focus:ring-red-500'
                         : 'border-gray-300 focus:ring-blue-500'
@@ -459,7 +360,7 @@ export default function AdminPanel() {
                     onChange={handleInputChange}
                     placeholder="0"
                     min="0"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-gray-800 ${
                       errors.inventory
                         ? 'border-red-500 focus:ring-red-500'
                         : 'border-gray-300 focus:ring-blue-500'
@@ -479,16 +380,12 @@ export default function AdminPanel() {
                   className={`flex-1 py-3 px-6 rounded-lg font-semibold text-white transition-colors ${
                     loading
                       ? 'bg-gray-400 cursor-not-allowed'
-                      : activeTab === 'create'
-                        ? 'bg-green-600 hover:bg-green-700'
-                        : 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-green-600 hover:bg-green-700'
                   }`}
                 >
                   {loading
                     ? 'Processing...'
-                    : activeTab === 'create'
-                      ? 'Create Product'
-                      : 'Update Product'}
+                    : 'Create Product'}
                 </button>
                 <button
                   type="button"
@@ -511,8 +408,7 @@ export default function AdminPanel() {
                 inventory
               </li>
               <li>
-                <strong>Update Mode:</strong> Provide the Product ID and update only the fields you want to
-                change
+                <strong>Edit Mode:</strong> Go to <Link href="/admin/edit" className="text-blue-600 hover:text-blue-700 font-bold">Edit Products</Link> to update existing products
               </li>
               <li>
                 <strong>Slug:</strong> Must be unique and URL-friendly (lowercase, hyphens only)

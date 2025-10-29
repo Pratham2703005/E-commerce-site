@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { connectDB } from '@/lib/mongodb';
 import { Product } from '@/lib/models/Product';
+import { ClientLayout } from '@/components/ClientLayout';
 
 interface Product {
   _id: string;
@@ -89,26 +90,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Inventory Dashboard</h1>
-              <p className="text-gray-600 mt-2">Real-time product inventory and statistics</p>
-            </div>
-            <Link
-              href="/"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              ← Back to Store
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
+    <ClientLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
@@ -309,6 +291,6 @@ export default async function DashboardPage() {
           </div>
         </div>
       </main>
-    </div>
+    </ClientLayout>
   );
 }

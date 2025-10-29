@@ -1,11 +1,11 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { connectDB } from '@/lib/mongodb';
+import { Product } from '@/lib/models/Product';
 import Link from 'next/link';
-import useIsMounted from '@/hooks/useIsMouned';
+import { notFound } from 'next/navigation';
+import AddToCartClient from '@/components/AddToCartClient';
+import { ClientLayout } from '@/components/ClientLayout';
 
-interface Product {
+interface ProductDetail {
   _id: string;
   name: string;
   slug: string;
@@ -16,85 +16,81 @@ interface Product {
   lastUpdated: string;
 }
 
-export default function ProductDetailPage() {
-  const params = useParams();
-  const slug = params.slug as string;
-  const isMounted = useIsMounted();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
+// ISR Configuration: Revalidate every 60 seconds
+export const revalidate = 60;
 
-  useEffect(() => {
-    async function fetchProduct() {
-      try {
-        setLoading(true);
-        const res = await fetch(`/api/products/${slug}`);
-        const data = await res.json();
+// Generate static params for all products at build time
+export async function generateStaticParams() {
+  try {
+    await connectDB();
+    const products = await Product.find({}, 'slug').lean();
+    // Treat the result as an array of objects that only contain slug to avoid unsafe casting
+    const slugOnly = products as unknown as ProductDetail[];
+    return slugOnly.map((product: ProductDetail) => ({
+      slug: product.slug,
+    }));
+  } catch (error) {
+    console.error('Error generating static params:', error);
+    return [];
+  }
+}
 
-        if (data.success) {
-          setProduct(data.data);
-        } else {
-          setError(data.error || 'Product not found');
-        }
-      } catch (err) {
-        setError('Failed to fetch product');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
+// Fetch product at build time and on each ISR revalidation
+async function getProductBySlug(slug: string): Promise<ProductDetail | null> {
+  try {
+    await connectDB();
+    const product = await Product.findOne({ slug }).lean();
+    if (!product) return null;
+    return JSON.parse(JSON.stringify(product));
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    return null;
+  }
+}
 
-    if (slug) {
-      fetchProduct();
-    }
-  }, [slug]);
+interface PageProps {
+  params: Promise<{
+    slug: string;
+  }>;
+}
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading product...</p>
-        </div>
-      </div>
-    );
+export async function generateMetadata({ params }: PageProps) {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+
+  if (!product) {
+    return {
+      title: 'Product Not Found',
+    };
   }
 
-  if (error || !product) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Product Not Found</h1>
-          <p className="text-gray-600 mb-6">{error || 'The product you are looking for does not exist.'}</p>
-          <Link
-            href="/"
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Back to Products
-          </Link>
-        </div>
-      </div>
-    );
+  return {
+    title: `${product.name} | TalantorCore`,
+    description: product.description,
+  };
+}
+
+export default async function ProductDetailPage({ params }: PageProps) {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+
+  if (!product) {
+    notFound();
   }
 
   const inStock = product.inventory > 0;
   const lowStock = product.inventory > 0 && product.inventory <= 5;
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link href="/" className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
-            ← Back to Products
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-        </div>
-      </header>
+    <ClientLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Link href="/" className="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-2 mb-6">
+          ← Back to Products
+        </Link>
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Product Image Placeholder */}
           <div className="bg-white rounded-lg shadow-lg p-8 flex items-center justify-center">
@@ -152,55 +148,8 @@ export default function ProductDetailPage() {
               </p>
             </div>
 
-            {/* Quantity Selector */}
-            {inStock && (
-              <div className="mb-8">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity
-                </label>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded"
-                  >
-                    −
-                  </button>
-                  {isMounted && (
-                  <input
-                    type="number"
-                    min="1"
-                    max={product.inventory}
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.min(product.inventory, parseInt(e.target.value) || 1))}
-                    className="w-16 text-center border border-gray-300 rounded py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                )}
-                  <button
-                    onClick={() => setQuantity(Math.min(product.inventory, quantity + 1))}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Add to Cart Button */}
-            <button
-              disabled={!inStock}
-              className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-colors ${
-                inStock
-                  ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
-                  : 'bg-gray-400 cursor-not-allowed'
-              }`}
-              onClick={() => {
-                if (inStock) {
-                  alert(`Added ${quantity} item(s) to cart!`);
-                }
-              }}
-            >
-              {inStock ? `Add to Cart (${quantity})` : 'Out of Stock'}
-            </button>
+            {/* Quantity Selector & Add to Cart - Client Component */}
+            {inStock && <AddToCartClient productName={product.name} inventory={product.inventory} />}
 
             {/* Additional Info */}
             <div className="mt-12 pt-8 border-t border-gray-200">
@@ -220,6 +169,6 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </main>
-    </div>
+    </ClientLayout>
   );
 }

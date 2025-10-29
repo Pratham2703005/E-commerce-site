@@ -1,31 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useWishlist } from '@/contexts/WishlistContext';
 
+// Full button version for product detail pages
 export function WishlistButtonClient({
-  productName,
+  productId,
 }: {
   productId: string;
-  productName: string;
+  productName?: string;
 }) {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const wishlisted = isInWishlist(productId);
 
   const handleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
-    // In a real app, you'd save this to localStorage or a database
-    alert(`${productName} ${!isWishlisted ? 'added to' : 'removed from'} wishlist!`);
+    if (wishlisted) {
+      removeFromWishlist(productId);
+    } else {
+      addToWishlist(productId);
+    }
   };
 
   return (
     <button
       onClick={handleWishlist}
-      className={`w-full py-2 px-4 rounded-lg transition-colors font-semibold ${
-        isWishlisted
-          ? 'bg-red-100 text-red-700 hover:bg-red-200'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      className={`text-2xl hover:scale-125 transition-transform duration-200 ${
+        wishlisted ? 'text-red-500' : 'text-gray-400'
       }`}
+      title={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+      aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
     >
-      {isWishlisted ? '❤️ In Wishlist' : '🤍 Add to Wishlist'}
+      {wishlisted ? '❤️' : '🤍'}
     </button>
   );
 }
